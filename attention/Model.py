@@ -8,7 +8,7 @@ class HybridAttentionModel(nn.Module):
     '''
     word_embedding -> lstm -> self attention -> hybrid attention
     '''
-    def __init__(self, args, isUser=False):
+    def __init__(self, args):
         super(HybridAttentionModel, self).__init__()
         self.args = args
         self.embed_size = args.embed_size
@@ -16,9 +16,9 @@ class HybridAttentionModel(nn.Module):
 
 
         self.word_embed = nn.Embedding.from_pretrained(loadEmbed(self.args.embed_fileName, self.embed_size, self.args.vocab_size, True))
-        self.lstm = nn.LSTM(self.embed_size, self.lstm_hidden_size,batch_first=True,
+        self.lstm = nn.LSTM(self.embed_size, self.lstm_hidden_size, batch_first=True,
                             dropout=self.args.drop_out,
-                            num_layers=self.args.num_layers,
+                            num_layers=self.args.lstm_num_layers,
                             bidirectional=self.args.bidirectional
                             )
         self.user_layer = UserGeneration(self.args)
@@ -33,11 +33,23 @@ class HybridAttentionModel(nn.Module):
         self.w_u = nn.Linear(self.args.lstm_hidden_size, self.args.lstm_hidden_size, bias=False)
         self.w_final = nn.Linear(self.args.lstm_hidden_size, self.args.class_kind, bias=True)
 
+    def reset_args(self, lstm_hidden_size,
+                   lstm_num_layers,
+                   kernel_size,
+                 drop_out_lstm,
+                 drop_out_cnn
+                   ):
+        self.args.lstm_hidden_size = lstm_hidden_size
+        self.args.lstm_num_layers = lstm_num_layers
+        self.args.kernel_size= kernel_size
+        self.args.drop_out_lstm = drop_out_lstm
+        self.args.drop_out_cnn = drop_out_cnn
+
     def _init_lstm_hidden(self):
         h_0_size_1 = 1
         if self.args.bidirectional:
             h_0_size_1 *= 2
-        h_0_size_1 *= self.args.num_layers
+        h_0_size_1 *= self.args.lstm_num_layers
         hiddena = torch.rand((h_0_size_1, self.args.batch_size, self.args.lstm_hidden_size),
                               dtype=torch.float, device=self.args.device)
         hiddenb = torch.rand((h_0_size_1, self.args.batch_size, self.args.lstm_hidden_size),
@@ -45,7 +57,7 @@ class HybridAttentionModel(nn.Module):
         return hiddena, hiddenb
 
 
-    def forward(self, question, answer, user, gt):
+    def forward(self, question, answer, user):
         '''
 
         :param question: N * L_q
@@ -56,6 +68,11 @@ class HybridAttentionModel(nn.Module):
         q_embed = self.word_embed(question)
         a_embed = self.word_embed(answer)
         u_embed = self.word_embed(user)
+
+        #WARNING: size of vector is not always have the same length
+        #Reset question and answer question length
+
+
         # TODO: bidirectional lstm  vector pool
         bi = 2 if self.args.bidirectional else 1
         hiddena, hiddenb = self._init_lstm_hidden()
@@ -91,7 +108,10 @@ class HybridAttentionModel(nn.Module):
         u_h_new = (u_theta * q_lstm).sum(dim=1)
         h = torch.tanh(self.w_q(q_h_new) + self.w_a(a_h_new) + self.w_u(u_h_new))
         # batch * class
-        result = F.log_softmax(self.w_final(h),dim=0)
-        result = torch.index_select(result, 0, gt)
-        result = -1.0 * result.sum()
-        return result
+        #WARNING: check softmax dimention set
+        result = F.log_softmax(self.w_final(h), dim=-1)
+        _, predict = result.max(0)
+
+
+
+        return result, predict

@@ -3,3 +3,7 @@ __pycache__/*
 *.csv
 *.model
 *.txt
+data/*
+.idea/*
+*.xml
+fuck*

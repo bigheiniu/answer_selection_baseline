@@ -4,40 +4,7 @@ import torch
 import attention.Constants as Constants
 from XMLHandler import xmlhandler
 from TextClean import textClean
-import os
 import numpy as np
-
-# def read_user_context_from_file(user_file):
-#     #######  format ########
-#     # content_1, content_2, content_3
-#     ############################
-#     data = []
-#     with open(user_file,'r') as f1:
-#         for line in f1.readlines():
-#             th = []
-#             for t in line.strip().split(","):
-#                 try:
-#                     th.append(int(t))
-#                 except:
-#                     i = 1
-#             data.append(th)
-#     return data
-#
-#
-# def read_question_answer_user_from_file(file):
-#     #######  format ############
-#     # questionId, answerId, userId
-#     ############################
-#     data = []
-#     with open(file, 'r') as f1:
-#         for line in f1.readlines():
-#             th = line.strip().rstrip(",").split(",")
-#             data.append(th)
-#
-#     data = np.array(data).astype(int)
-#     data = np.array(data).astype(int)
-#
-#     return data
 
 
 def shrink_clean_text(content, max_sent_len):
@@ -114,10 +81,7 @@ def main():
     file_dir = "./"
     parser = argparse.ArgumentParser()
     # add by yichuan li
-    # parser.add_argument('-content_file', default="content.csv")
-    # parser.add_argument('-user_file', default="user.csv")
-    # parser.add_argument('-q_a_u_file', default="question_answer_user.csv")
-    parser.add_argument('-raw_data',default="/home/bigheiniu/course/ASU_Course/cqa/data/v3.2/")
+    parser.add_argument('-raw_data',default="/home/weiying/yichuan/data/v3.2/")
 
 
 
@@ -127,16 +91,15 @@ def main():
 
     parser.add_argument('-share_vocab', action='store_true')
     parser.add_argument('-vocab', default=None)
+    parser.add_argument('-train_size', default=0.6)
+    parser.add_argument('-val_size', default=0.3)
+    parser.add_argument('-test_size', default=0.1)
 
     opt = parser.parse_args()
     content, user_context, question_answer_user_label = xmlhandler.main(opt.raw_data)
 
     content_word_list = shrink_clean_text(content, opt.max_word_seq_len)
 
-    # train_src_word_insts = read_instances_from_file(
-    #     opt.train_src, opt.max_word_seq_len, opt.keep_case)
-    # train_tgt_word_insts = read_instances_from_file(
-    #     opt.train_tgt, opt.max_word_seq_len, opt.keep_case)
 
 
 
@@ -146,15 +109,24 @@ def main():
     print('[Info] Convert  word instances into sequences of word index.')
     word_id = convert_instance_to_idx_seq(content_word_list, word2idx)
 
+    #split train-valid-test dataset
+    index = np.random.shuffle(np.arange(len(question_answer_user_label)))
+    length = len(question_answer_user_label)
+    train_index = index[:,opt.train_size * length]
+    val_index = index[opt.train_size * length:(opt.train_size + opt.test_size)* length]
+    test_index = index[(opt.train_size + opt.test_size)* length:]
+
     data = {
         'settings': opt,
         'dict': word2idx,
         'content': word_id,
         'user': user_context,
-        'question_anser_user': question_answer_user_label
+        'question_answer_user_train': question_answer_user_label[train_index],
+        'question_answer_user_valid': question_answer_user_label[val_index],
+        'question_answer_user_test': question_answer_user_label[test_index]
     }
 
-    opt.save_data="fuck.model"
+    opt.save_data="/home/weiying/yichuan/data/fuck.model"
     print('[Info] Dumping the processed data to pickle file', opt.save_data)
     torch.save(data, opt.save_data)
     print('[Info] Finish.')

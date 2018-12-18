@@ -5,8 +5,8 @@ import re
 
 def parse(xmlfile):
     tree = etree.parse(xmlfile)
-    good = 0
-    bad = 1
+    good = 1
+    bad = 0
     content = {}
     user = {}
     question_answer_user_label = []

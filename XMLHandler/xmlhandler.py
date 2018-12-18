@@ -1,12 +1,9 @@
 """This module produces SemEval Task 3, Subtask B datasets in JSON."""
 
-from itertools import chain
-from json import dump
+
 
 from XMLHandler.XMLpreprocessing import parse
-from XMLHandler.xmlfiles import XMLFiles
 import os
-import numpy as np
 
 
 

@@ -65,7 +65,7 @@ class SelfAttention(nn.Module):
 
 
 class HybridAttentionLayer(nn.Module):
-    def __init__(self,args):
+    def __init__(self, args):
         super(HybridAttentionLayer, self).__init__()
         self.args = args
         self.w_q_m = nn.Linear(self.args.lstm_hidden_size, self.args.lstm_hidden_size)
@@ -123,76 +123,5 @@ class RatioLayer(nn.Module):
 
 
 
-# class HybridAttentionModel(nn.Module):
-#     '''
-#     word_embedding -> lstm -> self attention -> hybrid attention
-#     '''
-#     def __init__(self, args, isUser=False):
-#         super(HybridAttentionModel, self).__init__()
-#         self.args = args
-#         self.embed_size = self.args.embed_size
-#         self.lstm_hidden_size = self.args.lstm_hidden_size
-#
-#
-#         self.word_embed = nn.Embedding.from_pretrained(loadEmbed(self.args.embed_fileName, self.embed_size, self.args.device, True))
-#         self.lstm = nn.LSTM(self.embed_size, self.lstm_hidden_size)
-#         self.user_layer = UserGeneration(self.args)
-#         self.self_atten_q = SelfAttention(self.args)
-#         self.self_atten_a = SelfAttention(self.args)
-#         # answer-question mutual attention share attention trainable weight
-#         self.hybrid_atten_q_a = HybridAttention(self.args)
-#         self.hybrid_atten_u_q = HybridAttention(self.args)
-#         self.ratio_layer = RatioLayer()
-#         self.w_q = nn.Linear(self.args.lstm_hidden_size, self.args.lstm_hidden_size, bias=False)
-#         self.w_a = nn.Linear(self.args.lstm_hidden_size, self.args.lstm_hidden_size, bias=False)
-#         self.w_u = nn.Linear(self.args.lstm_hidden_size, self.args.lstm_hidden_size, bias=False)
-#         self.w_final = nn.Linear(self.args.lstm_hidden_size, self.args.class_kind, bias=True)
-#
-#     def _init_lstm_hidden(self):
-#         h_0_size_1 = 1
-#         if self.args.bidirectional:
-#             h_0_size_1 *= 2
-#         hiddena = torch.zeros((h_0_size_1, self.args.batch_size, self.args.lstm_hidden_size),
-#                               dtype=torch.FloatTensor, device=self.args.device)
-#         hiddenb = torch.zeros((h_0_size_1, self.args.batch_size, self.args.lstm_hidden_size),
-#                               dtype=torch.FloatTensor, device=self.args.device)
-#         return hiddena, hiddenb
-#
-#
-#     def forward(self, question, answer, user):
-#         '''
-#
-#         :param question: N * L_q
-#         :param answer: N * L_a
-#         :param user: N * L_document
-#         :return:
-#         '''
-#         q_embed = self.word_embed(question)
-#         a_embed = self.word_embed(answer)
-#         u_embed = self.word_embed(user)
-#         hiddena, hiddenb = self._init_lstm_hidden()
-#         q_lstm = self.lstm(q_embed, (hiddena, hiddenb))
-#         hiddena, hiddenb = self._init_lstm_hidden()
-#         a_lstm = self.lstm(a_embed, (hiddena, hiddenb))
-#         u_vec = self.user_layer(u_embed)
-#         #self attention
-#         q_alpha_atten = self.self_atten_q(q_lstm)
-#         a_alpha_atten = self.self_atten_a(a_lstm)
-#         #mutal atten
-#         q_beta_atten = self.hybrid_atten_q_a(q_lstm, a_lstm, 0)
-#         a_beta_atten = self.hybrid_atten_q_a(a_lstm, q_lstm, 1)
-#         u_lambda_atten = self.hybrid_atten_u_q(u_vec, q_lstm, 2)
-#
-#         #   represent with attention
-#         q_yi = self.ratio_layer(q_alpha_atten, q_beta_atten)
-#         a_yi = self.ratio_layer(a_alpha_atten, a_beta_atten)
-#         u_theta = self.ratio_layer(q_alpha_atten, q_beta_atten, u_lambda_atten)
-#         q_h_new = (q_yi * q_lstm).sum(dim=1)
-#         a_h_new = (a_yi * a_lstm).sum(dim=1)
-#         u_h_new = (u_theta * q_lstm).sum(dim=1)
-#         h = F.tanh(self.w_q(q_h_new) + self.w_a(a_h_new) + self.w_u(u_h_new))
-#         result = F.log_softmax(self.w_final(h))
-#         return result
-#
-#
+
 
