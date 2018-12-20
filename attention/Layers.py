@@ -25,12 +25,14 @@ class UserGeneration(nn.Module):
         self.args = args
         # different kernel size
 
-        self.conv1 = nn.Conv2d(self.args.in_channels_1, self.args.out_channels_1,
-                              self.args.kernel_size_1)
-        self.conv2 = nn.Conv2d(self.args.in_channels_2, self.args.out_channels_2,
-                              self.args.kernel_size_2)
-        self.conv3 = nn.Conv2d(self.args.in_channels_3, self.args.out_channels_3,
-                              self.args.kernel_size_3)
+        self.conv1 = nn.Conv2d(self.args.in_channels, self.args.out_channels,
+                              self.args.kernel_size)
+
+        self.bn = nn.BatchNorm2d(self.args.out_channels)
+        # self.conv2 = nn.Conv2d(self.args.in_channels_2, self.args.out_channels_2,
+        #                       self.args.kernel_size_2)
+        # self.conv3 = nn.Conv2d(self.args.in_channels_3, self.args.out_channels_3,
+        #                       self.args.kernel_size_3)
 
         #feature map is a vector
 
@@ -39,10 +41,10 @@ class UserGeneration(nn.Module):
         if(input.dim() != 4):
             input.unsqueeze_(1)
 
-        x1 = torch.max(F.relu(self.conv1(input)).contiguous().view(self.args.batch_size, self.args.out_channels_1, -1), dim=2)[0]
-        x2 = torch.max(F.relu(self.conv2(input)).contiguous().view(self.args.batch_size, self.args.out_channels_2, -1), dim=2)[0]
-        x3 = torch.max(F.relu(self.conv3(input)).contiguous().view(self.args.batch_size, self.args.out_channels_3, -1), dim=2)[0]
-        x = torch.cat((x1, x2, x3), 1).view(self.args.batch_size,-1)
+        x = F.relu(self.conv1(input))
+        x = self.bn(x)
+        x, _ = torch.max(x, -1)
+        x, _ = torch.max(x, -1)
         return x
 
 

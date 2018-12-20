@@ -13,7 +13,8 @@ def loadEmbed(file, embed_size, vocab_size, word2idx=None, Debug=True):
 
     #load pretrained model
     else:
-        print(" [INFO] load pre-trained word2vec embedding")
+        embed_matrix = np.zeros([len(word2idx), embed_size])
+        print(" [Info] load pre-trained word2vec embedding")
         sub_dir = "/".join(file.split("/")[:-1])
         if "glove" in file:
             word2vec_file = ".".join(file.split("/")[-1].split(".")[:-1])+"word2vec"+".txt"
@@ -23,12 +24,14 @@ def loadEmbed(file, embed_size, vocab_size, word2idx=None, Debug=True):
 
         model = gensim.models.KeyedVectors.load_word2vec_format(file,
                                                                 binary=False)
-        embed_matrix = np.zeros(vocab_size+1, embed_size)
+        print("[Info] Load glove finish")
+
         for word, i in word2idx.items():
             if word in model.vocab:
                 embed_matrix[i] = model.word_vec(word)
 
         weights = torch.FloatTensor(embed_matrix)
+
         return weights
 
 # def mAP(pred, label):

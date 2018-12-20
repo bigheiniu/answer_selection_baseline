@@ -8,16 +8,16 @@ class HybridAttentionModel(nn.Module):
     '''
     word_embedding -> lstm -> self attention -> hybrid attention
     '''
-    def __init__(self, args):
+    def __init__(self, args, word2idx):
         super(HybridAttentionModel, self).__init__()
         self.args = args
         self.embed_size = args.embed_size
         self.lstm_hidden_size = args.lstm_hidden_size
+        self.word2idx= word2idx
 
-
-        self.word_embed = nn.Embedding.from_pretrained(loadEmbed(self.args.embed_fileName, self.embed_size, self.args.vocab_size, True))
+        self.word_embed = nn.Embedding.from_pretrained(loadEmbed(self.args.embed_fileName, self.embed_size, self.args.vocab_size, self.word2idx, self.args.DEBUG))
         self.lstm = nn.LSTM(self.embed_size, self.lstm_hidden_size, batch_first=True,
-                            dropout=self.args.drop_out,
+                            dropout=self.args.drop_out_lstm,
                             num_layers=self.args.lstm_num_layers,
                             bidirectional=self.args.bidirectional
                             )
@@ -110,8 +110,5 @@ class HybridAttentionModel(nn.Module):
         # batch * class
         #WARNING: check softmax dimention set
         result = F.log_softmax(self.w_final(h), dim=-1)
-        _, predict = result.max(0)
-
-
-
+        _, predict = result.max(1)
         return result, predict

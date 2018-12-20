@@ -37,7 +37,7 @@ def collate_fn(insts, label=False, not_user=True):
 class QuestionAnswerUser(torch.utils.data.Dataset):
     def __init__(
         self, word2idx, word_insts,
-            user, question_anser_user, max_u_len, transformer=None):
+            user, question_answer_user, max_u_len, transformer=None):
 
         idx2word = {idx:word for word, idx in word2idx.items()}
         self._word2idx = word2idx
@@ -45,13 +45,13 @@ class QuestionAnswerUser(torch.utils.data.Dataset):
         self._world_insts = word_insts
         self._user = user
         self._max_u_len = max_u_len
-        self._question_answer_user = question_anser_user
+        self._question_answer_user = question_answer_user
         self._transformer = transformer
 
     @property
     def n_insts(self):
         ''' Property for dataset size '''
-        return len(self._world_insts)
+        return len(self._question_answer_user)
 
     @property
     def vocab_size(self):

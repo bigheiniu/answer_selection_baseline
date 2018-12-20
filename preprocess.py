@@ -81,7 +81,7 @@ def main():
     file_dir = "./"
     parser = argparse.ArgumentParser()
     # add by yichuan li
-    parser.add_argument('-raw_data',default="/home/weiying/yichuan/data/v3.2/")
+    parser.add_argument('-raw_data',default="/home/yichuan/course/cqa/data/v3.2/")
 
 
 
@@ -99,7 +99,7 @@ def main():
     content, user_context, question_answer_user_label = xmlhandler.main(opt.raw_data)
 
     content_word_list = shrink_clean_text(content, opt.max_word_seq_len)
-
+    question_answer_user_label = np.array(question_answer_user_label)
 
 
 
@@ -110,11 +110,15 @@ def main():
     word_id = convert_instance_to_idx_seq(content_word_list, word2idx)
 
     #split train-valid-test dataset
-    index = np.random.shuffle(np.arange(len(question_answer_user_label)))
+
+    index = np.arange(len(question_answer_user_label))
+    np.random.shuffle(index)
     length = len(question_answer_user_label)
-    train_index = index[:,opt.train_size * length]
-    val_index = index[opt.train_size * length:(opt.train_size + opt.test_size)* length]
-    test_index = index[(opt.train_size + opt.test_size)* length:]
+    train_end = int(opt.train_size * length)
+    val_end = int(opt.val_size * length) + train_end
+    train_index = index[:train_end]
+    val_index = index[train_end: val_end]
+    test_index = index[val_end:]
 
     data = {
         'settings': opt,
@@ -122,11 +126,11 @@ def main():
         'content': word_id,
         'user': user_context,
         'question_answer_user_train': question_answer_user_label[train_index],
-        'question_answer_user_valid': question_answer_user_label[val_index],
+        'question_answer_user_val': question_answer_user_label[val_index],
         'question_answer_user_test': question_answer_user_label[test_index]
     }
 
-    opt.save_data="/home/weiying/yichuan/data/fuck.model"
+    opt.save_data="/home/yichuan/course/cqa/data/fuck.model"
     print('[Info] Dumping the processed data to pickle file', opt.save_data)
     torch.save(data, opt.save_data)
     print('[Info] Finish.')
