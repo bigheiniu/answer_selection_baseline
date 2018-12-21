@@ -1,11 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" autoUpload="On explicit save action" serverName="yichuan@10.211.18.38:22">
+  <component name="PublishConfigData" autoUpload="On explicit save action" serverName="weiying">
     <serverData>
-      <paths name="yichuan@10.211.18.38:22">
+      <paths name="Copy of project-level server 'weiying'">
         <serverdata>
           <mappings>
-            <mapping deploy="/home/yichuan/course/cqa" local="$PROJECT_DIR$" />
+            <mapping deploy="/home/yichuan/course/cqa" local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="weiying">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/home/yichuan/course/cqa" local="$PROJECT_DIR$" web="/" />
           </mappings>
         </serverdata>
       </paths>

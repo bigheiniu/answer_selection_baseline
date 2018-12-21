@@ -32,7 +32,10 @@ class HybridAttentionModel(nn.Module):
         self.w_a = nn.Linear(self.args.lstm_hidden_size, self.args.lstm_hidden_size, bias=False)
         self.w_u = nn.Linear(self.args.lstm_hidden_size, self.args.lstm_hidden_size, bias=False)
         self.w_final = nn.Linear(self.args.lstm_hidden_size, self.args.class_kind, bias=True)
-
+        nn.init.xavier_normal_(self.w_q.weight)
+        nn.init.xavier_normal_(self.w_a.weight)
+        nn.init.xavier_normal_(self.w_u.weight)
+        nn.init.xavier_normal_(self.w_final.weight)
     def reset_args(self, lstm_hidden_size,
                    lstm_num_layers,
                    kernel_size,

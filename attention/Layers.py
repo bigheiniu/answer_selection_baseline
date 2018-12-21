@@ -7,6 +7,8 @@ import torch.nn.functional as F
 from attention.Utils import loadEmbed
 __author__ = "Yichuan Li"
 
+def xavier_uniform_init(w):
+    return nn.init.xavier_uniform(w)
 
 class Entropy(nn.Module):
     def __init__(self):
@@ -27,7 +29,7 @@ class UserGeneration(nn.Module):
 
         self.conv1 = nn.Conv2d(self.args.in_channels, self.args.out_channels,
                               self.args.kernel_size)
-
+        torch.nn.init.xavier_uniform_(self.conv1.weight)
         self.bn = nn.BatchNorm2d(self.args.out_channels)
         # self.conv2 = nn.Conv2d(self.args.in_channels_2, self.args.out_channels_2,
         #                       self.args.kernel_size_2)
@@ -54,6 +56,7 @@ class SelfAttention(nn.Module):
         super(SelfAttention,self).__init__()
         self.args = args
         self.w_1_v = nn.Linear(self.args.lstm_hidden_size, 1)
+        self.w_1_v.weight = xavier_uniform_init(self.w_1_v.weight)
 
     def forward(self, input):
         # input: l_q* lstm_hidden_size
@@ -74,6 +77,13 @@ class HybridAttentionLayer(nn.Module):
         self.w_a_m = nn.Linear(self.args.lstm_hidden_size, self.args.lstm_hidden_size)
         self.w_aq_m = nn.Linear(self.args.lstm_hidden_size, self.args.lstm_hidden_size)
         self.w_2_v = nn.Linear(self.args.lstm_hidden_size, 1)
+
+        self.w_q_m.weight = xavier_uniform_init(self.w_q_m.weight)
+        self.w_a_m.weight = xavier_uniform_init(self.w_a_m.weight)
+        self.w_aq_m.weight = xavier_uniform_init(self.w_aq_m.weight)
+        self.w_2_v.weight = xavier_uniform_init(self.w_2_v.weight)
+
+
         self.entropy = Entropy()
 
     def forward(self, content1, content2, is_user):
