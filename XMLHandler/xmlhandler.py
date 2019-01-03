@@ -85,7 +85,7 @@ def read_xml_data(path):
     # hanle all the data under v3.2
     # for easy handle, we will read all the data and then random split data into "train, val, test"
     sub_dirs = os.listdir(path)
-    sub_dirs = [ os.path.join(path,dir) for dir in sub_dirs if os.path.isdir(os.path.join(path,dir))]
+    sub_dirs = [os.path.join(path,dir) for dir in sub_dirs if os.path.isdir(os.path.join(path,dir))]
     # sub_dirs = [os.path.join(path, dir) for dir in sub_dirs ]
     content = []
     question_answer_user_label = []

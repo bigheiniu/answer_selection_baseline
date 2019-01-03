@@ -66,7 +66,6 @@ def build_vocab_idx(word_insts, min_word_count):
                 word2idx[word] = len(word2idx)
             else:
                 ignored_word_count += 1
-
     print('[Info] Trimmed vocabulary size = {},'.format(len(word2idx)),
           'each with minimum occurrence = {}'.format(min_word_count))
     print("[Info] Ignored word count = {}".format(ignored_word_count))
@@ -78,10 +77,9 @@ def convert_instance_to_idx_seq(word_insts, word2idx):
 
 def main():
     ''' Main function '''
-    file_dir = "./"
     parser = argparse.ArgumentParser()
     # add by yichuan li
-    parser.add_argument('-raw_data',default="/home/yichuan/course/cqa/data/v3.2/")
+    parser.add_argument('-raw_data',default="data/v3.2/")
 
 
 
@@ -120,6 +118,14 @@ def main():
     val_index = index[train_end: val_end]
     test_index = index[val_end:]
 
+    #DEBUG
+    # user = [i_list[2] for i_list in question_answer_user_label]
+    # unique, counts = np.unique(np.array(user), return_counts=True)
+    #
+    # dic = dict(zip(unique, counts))
+    # sorted_dic = sorted(dic.items(), key=lambda x: -x[1])
+    #DEBUG END
+
     data = {
         'settings': opt,
         'dict': word2idx,
@@ -130,10 +136,33 @@ def main():
         'question_answer_user_test': question_answer_user_label[test_index]
     }
 
-    opt.save_data="/home/yichuan/course/cqa/data/fuck.model"
+    opt.save_data="data/store.torchpickle"
     print('[Info] Dumping the processed data to pickle file', opt.save_data)
     torch.save(data, opt.save_data)
     print('[Info] Finish.')
+
+
+# import plotly.plotly as py
+# import plotly.tools as tls
+#
+#
+# import matplotlib.pyplot as plt
+# def plot(data):
+#
+#     marker = 'o'
+#     t = list(range(len(data[0])))
+#     for i in data:
+#         plt.plot(t, i)
+#     # plt.hist(data, bins=len(np.unique(data)), facecolor='green')
+#     plt.grid(True)
+#     plt.show()
+
+    # histogram = plt.figure()
+    # bins = np.linspace(0, 10000, 10000)
+    # plt.hist(data, bins, alpha=0.5)
+    # plotly_fig = tls.mpl_to_plotly(histogram)
+    # py.iplot(plotly_fig, filename='histogram-mpl-same')
+
 
 if __name__ == '__main__':
     main()

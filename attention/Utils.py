@@ -8,13 +8,14 @@ from gensim.scripts.glove2word2vec import glove2word2vec
 def loadEmbed(file, embed_size, vocab_size, word2idx=None, Debug=True):
     # read pretrained word2vec, convert to floattensor
     if(Debug):
+        print("[WARN] load randn embedding for DEBUG")
         embed = np.random.rand(vocab_size, embed_size)
         return torch.FloatTensor(embed)
 
     #load pretrained model
     else:
         embed_matrix = np.zeros([len(word2idx), embed_size])
-        print(" [Info] load pre-trained word2vec embedding")
+        print("[Info] load pre-trained word2vec embedding")
         sub_dir = "/".join(file.split("/")[:-1])
         if "glove" in file:
             word2vec_file = ".".join(file.split("/")[-1].split(".")[:-1])+"word2vec"+".txt"
@@ -41,8 +42,14 @@ def loadEmbed(file, embed_size, vocab_size, word2idx=None, Debug=True):
 
 def Accuracy(pred, label):
     target = 0
+    zero_count = 0
+    one_count = 0
+    assert len(pred) == len(label),"length not equal"
     for i in range(len(pred)):
+        if pred[i] == 0:
+            zero_count += 1
+        elif pred[i] == 1:
+            one_count += 1
         if pred[i] == label[i]:
             target += 1
-    return target * 1.0 / len(pred)
-
+    return target * 1.0 / len(pred), zero_count / len(pred), one_count / len(pred)
