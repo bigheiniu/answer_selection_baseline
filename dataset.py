@@ -35,10 +35,11 @@ def collate_fn(insts, label=False, not_user=True):
     return batch_seq
 
 class QuestionAnswer_CNTN(torch.utils.data.Dataset):
-    def __init__(self, question_answer_user, word2idx):
+    def __init__(self, question_answer_user, word2idx, word_inst):
         idx2word = {idx: word for word, idx in word2idx.items()}
         self._word2idx = word2idx
         self._idx2word = idx2word
+        self._word_inst = word_inst
         self.question_answer = self._item_pair(
             self._sorted_question([item[0:2]+item[-1] for item in question_answer_user])
         )
@@ -65,14 +66,19 @@ class QuestionAnswer_CNTN(torch.utils.data.Dataset):
 
     def __len__(self):
         return len(self.question_answer)
+
     def __getitem__(self, idx):
         question_answer_dic = self.question_answer[idx]
         question = list(question_answer_dic.keys())[0]
-        answer = np.array(question_answer_dic[question][0])
+        answer_id = np.array(question_answer_dic[question][0])
         labels = np.array(question_answer_dic[question_answer_dic][1])
-        good_answer_list = answer[labels == 1]
-        bad_answer_list = answer[labels == 0]
-        return question, good_answer_list, bad_answer_list, labels
+        good_answer_id_list = answer_id[labels == 1]
+        bad_answer_id_list = answer_id[labels == 0]
+
+        question_content = self._word_inst[question]
+        good_answer_content_list = self._word_inst[good_answer_id_list]
+        bad_answer_content_list = self._word_inst[bad_answer_id_list]
+        return question_content, good_answer_content_list, bad_answer_content_list, labels, [question]*len(answer_id)
 
 
 
@@ -157,4 +163,4 @@ class QuestionAnswerUser(torch.utils.data.Dataset):
             label = self._transformer(label)
 
 
-        return question_content, answer_content, user_contex_list, label
+        return question_content, answer_content, user_contex_list, label, question_id

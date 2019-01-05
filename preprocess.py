@@ -5,6 +5,7 @@ import attention.Constants as Constants
 from XMLHandler import xmlhandler
 from TextClean import textClean
 import numpy as np
+import networkx as nx
 
 
 def shrink_clean_text(content, max_sent_len):
@@ -16,10 +17,13 @@ def shrink_clean_text(content, max_sent_len):
     j = 0
     for sent in content:
         i += 1
-        words = sent.split(" ")
+        # words = sent.split(" ")
         words = textClean.cleanText(sent)
         if len(words) > max_sent_len:
             trimmed_sent_count += 1
+        elif len(words) < max_sent_len:
+            pad_sequence = [Constants.PAD_WORD] * (max_sent_len - len(words))
+            words = words + pad_sequence
         word_inst = words[:max_sent_len]
 
         if word_inst:
@@ -75,6 +79,37 @@ def convert_instance_to_idx_seq(word_insts, word2idx):
     ''' Mapping words to idx sequence. '''
     return [[word2idx.get(w, Constants.UNK) for w in s] for s in word_insts]
 
+def GenerateGraph(question_answer_user_label, train_index, val_index):
+    train_data = question_answer_user_label[train_index]
+    val_data = question_answer_user_label[val_index]
+    G = nx.Graph()
+    user_list = []
+    question_list = []
+    for line in train_data:
+        question = line[0]
+        answer = line[1]
+        user = line[2]
+
+        user_list.append(user)
+        question_list.append(question)
+        label = line[3]
+        G.add_node(question,type=0)
+        G.add_node(user, type=1)
+        G.add_edge(question, user, a_id=answer, score=label, train_removed=False)
+    for line in val_data:
+        question = line[0]
+        answer = line[1]
+        user = line[2]
+        user_list.append(user)
+        question_list.append(question)
+        label = line[3]
+        G.add_node(question, type=0)
+        G.add_node(user, type=1)
+        G.add_edge(question, user, a_id=answer, score=label, train_removed=True)
+    user_id2idx = {id: index for index, id in enumerate(user_list)}
+    question_id2idx = {id:index for index, id in enumerate(question_list)}
+    return G, user_id2idx, question_list
+
 def main():
     ''' Main function '''
     parser = argparse.ArgumentParser()
@@ -117,6 +152,7 @@ def main():
     train_index = index[:train_end]
     val_index = index[train_end: val_end]
     test_index = index[val_end:]
+    G = GenerateGraph(question_answer_user_label,train_index,val_index)
 
     #DEBUG
     # user = [i_list[2] for i_list in question_answer_user_label]
@@ -133,7 +169,8 @@ def main():
         'user': user_context,
         'question_answer_user_train': question_answer_user_label[train_index],
         'question_answer_user_val': question_answer_user_label[val_index],
-        'question_answer_user_test': question_answer_user_label[test_index]
+        'question_answer_user_test': question_answer_user_label[test_index],
+        'G': G
     }
 
     opt.save_data="data/store.torchpickle"

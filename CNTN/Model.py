@@ -5,11 +5,11 @@ from attention.Utils import loadEmbed
 
 
 class CNTN(nn.Module):
-    def __init__(self, args, word2idx):
+    def __init__(self, args, word2idx, pretrained_embed):
         super(CNTN, self).__init__()
         self.word2idx = word2idx
         self.args = args
-        self.embedding = nn.Embedding.from_pretrained(loadEmbed(self.args.embed_fileName, self.embed_size, self.args.vocab_size, self.word2idx, self.args.DEBUG))
+        self.embedding = nn.Embedding.from_pretrained(pretrained_embed)
         self.cntn = nn.ModuleList([
             nn.Sequential(
                 nn.Conv2d(in_channels=self.args.in_channels[i],
@@ -48,7 +48,8 @@ class CNTN(nn.Module):
         score = bad_score - good_score
         score = score + self.args.gamma
         loss = torch.where(score > 0, score, 0).sum()
-        return loss
+        result = torch.cat((good_score, bad_score))
+        return loss, result
 
 
 

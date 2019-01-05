@@ -13,14 +13,14 @@ class HybridAttentionModel(nn.Module):
     '''
     word_embedding -> lstm -> self attention -> hybrid attention
     '''
-    def __init__(self, args, word2idx):
+    def __init__(self, args, word2idx, pretrain_embed):
         super(HybridAttentionModel, self).__init__()
         self.args = args
         self.embed_size = args.embed_size
         self.lstm_hidden_size = args.lstm_hidden_size
         self.word2idx= word2idx
 
-        self.word_embed = nn.Embedding.from_pretrained(loadEmbed(self.args.embed_fileName, self.embed_size, self.args.vocab_size, self.word2idx, self.args.DEBUG))
+        self.word_embed = nn.Embedding.from_pretrained(pretrain_embed)
         # batch * max_len * embed_size
         self.lstm = nn.LSTM(self.embed_size, self.lstm_hidden_size, batch_first=True,
                             dropout=self.args.drop_out_lstm,
