@@ -20,10 +20,11 @@ from visualization.logger import Logger
 from CNTN.Model import CNTN
 from attention.Utils import loadEmbed, Precesion_At_One, Mean_Average_Precesion
 
-
 info = {}
 logger = Logger('./logs')
 i_flag = 0
+
+
 def prepare_dataloaders(data, opt):
     # ========= Preparing DataLoader =========#
 
@@ -215,14 +216,14 @@ def grid_search(params_dic):
 
 
 def train(args, train_data, val_data, word2idx,test_data, pre_trained_word2vec):
-    if (args.model == 1):
+    if (1 == 1):
         model = HybridAttentionModel(args, word2idx,pre_trained_word2vec).to(args.device)
         optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
         model_name = "Hybrid-Attention"
-    elif(args.model == 2):
-        model = CNTN(args, word2idx, pre_trained_word2vec).to(args.device)
-        optimizer = torch.optim.Adagrad(model.parameters(), lr=args.lr,weight_decay=args.weight_decay)
-        model_name = "CNTN"
+    # elif(args.model == 2):
+    #     model = CNTN(args, word2idx, pre_trained_word2vec).to(args.device)
+    #     optimizer = torch.optim.Adagrad(model.parameters(), lr=args.lr,weight_decay=args.weight_decay)
+    #     model_name = "CNTN"
 
     #TODO: Early stopping
     for epoch_i in range(args.epoch):
@@ -301,7 +302,17 @@ def main():
     # elif args.model == 2:
     #     paragram_dic = {}
     # else:
-    #     paragram_dic = {}
+    #     paragram_dic = {
+    #         "kernel_size": [3, 4, 5],
+    #         "layer":[3,4,5,6],
+    #         "in_features":[32, 64, 128, 256],
+    #         "out_features":[5,6],
+    #         "in_channel":[],
+    #         "out_channel":[],
+    #         "cnn_kernel_size":[],
+    #         "pool_kernel_size":[]
+    #
+    #     }
     pragram_list = grid_search(paragram_dic)
     args_dic = vars(args)
     for paragram in pragram_list:

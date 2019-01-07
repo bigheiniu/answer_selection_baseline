@@ -7,6 +7,42 @@ import numpy as np
     Question_id,  Answer_id can derectly get content
 '''
 
+def paired_collate_fn(insts):
+    question1, answer1, user1, score1, \
+    question_first_layer, question_edge_first_layer, question_edge_score_list_first_layer, \
+    question_second_layer, question_edge_second_layer, question_edge_score_list_second_layer, \
+    user_first_layer, user_edge_first_layer, user_edge_score_list_first_layer, \
+    user_second_layer, user_edge_second_layer, user_edge_score_list_second_layer = list(zip(*insts))
+    question1 = torch.LongTensor(question1)
+    answer1 = torch.LongTensor(answer1)
+    score1 = torch.LongTensor(score1)
+    user1 = torch.LongTensor(user1)
+
+    question_first_layer = torch.LongTensor(question_first_layer)
+    question_edge_first_layer = torch.LongTensor(question_edge_first_layer)
+    question_edge_score_list_first_layer = torch.LongTensor(question_edge_score_list_first_layer)
+
+    question_second_layer = torch.LongTensor(question_second_layer)
+    question_edge_second_layer = torch.LongTensor(question_edge_second_layer)
+    question_edge_score_list_second_layer = torch.LongTensor(question_edge_score_list_second_layer)
+
+    user_first_layer = torch.LongTensor(user_first_layer)
+    user_edge_first_layer = torch.LongTensor(user_edge_first_layer)
+    user_edge_score_list_first_layer = torch.LongTensor(user_edge_score_list_first_layer)
+
+    user_second_layer = torch.LongTensor(user_second_layer)
+    user_edge_second_layer = torch.LongTensor(user_edge_second_layer)
+    user_edge_score_list_second_layer = torch.LongTensor(user_edge_score_list_second_layer)
+
+    return  question1, answer1, user1, score1, \
+    question_first_layer, question_edge_first_layer, question_edge_score_list_first_layer, \
+    question_second_layer, question_edge_second_layer, question_edge_score_list_second_layer, \
+    user_first_layer, user_edge_first_layer, user_edge_score_list_first_layer, \
+    user_second_layer, user_edge_second_layer, user_edge_score_list_second_layer
+
+
+
+
 class Induceive_dataset(data.Dataset):
     '''
         pair comparsion; user random embed
@@ -20,13 +56,15 @@ class Induceive_dataset(data.Dataset):
 
                 user_first_layer_edge, user_first_layer_edge
     '''
-    def __init__(self, G,  args, content, training=True):
+    def __init__(self, G,  args, content, user_len, training=True):
         super(Induceive_dataset, self).__init__()
         self.G = G
         self.args = args
         self.content = content
         self.train = training
         self.adj, self.adj_answer, self.adj_score, self.adj_degree = self.adjance()
+        self.content_count = len(content)
+        self.user_len = user_len
 
         if(training):
             self.edges = self.train_edge()
@@ -44,7 +82,7 @@ class Induceive_dataset(data.Dataset):
         adj_score = {}
         adj_degree = {}
         for node in self.G.nodes():
-            neighbors = np.array([neighbor for neighbor in self.G.neighbors[node]])
+            neighbors = np.array([neighbor for neighbor in self.G.neighbors(node)])
             adj_degree[node] = len(neighbors)
 
             if len(neighbors) == 0:
@@ -59,7 +97,8 @@ class Induceive_dataset(data.Dataset):
             for neigh_node in neighbors:
                 answer.append(self.G[node][neigh_node]['a_id'])
                 score.append(self.G[node][neigh_node]['score'])
-
+            adj_answer[node] = answer
+            adj_score[node] = score
             adj[node] = neighbors
 
         return adj, adj_answer, adj_score, adj_degree
@@ -76,10 +115,12 @@ class Induceive_dataset(data.Dataset):
 
     def contentEmbed(self, content_id):
         content_id = np.array(content_id)
-        shape = list(content_id.shape).append(self.args.content_len)
+        shape = list(content_id.shape)
+        shape.append(self.args.content_len)
 
-        content_id = content_id.reshape(-1,1)
+        content_id = content_id.reshape(-1,)
         return np.array([self.content[id] for id in content_id]).reshape(shape)
+
 
     # def userid2idx_function(self, user_id_array):
     #     shape = user_id_array.shape
@@ -101,12 +142,13 @@ class Induceive_dataset(data.Dataset):
 
     def __len__(self):
         return len(self.edges)
+        # return 10
 
 
     def __getitem__(self, idx):
         edge = self.edges[idx]
-        question = edge[0] if self.G.node[edge[0]]['flag'] == 0 else edge[1]
-        user = edge[0] if self.G.node[edge[0]]['flag'] == 1 else edge[1]
+        question = [edge[0] if self.G.node[edge[0]]['type'] == 0 else edge[1]]
+        user = [edge[0] if self.G.node[edge[0]]['type'] == 1 else edge[1]]
         answer = self.G[edge[0]][edge[1]]['a_id']
         score = self.G[edge[0]][edge[1]]['score']
 
@@ -131,15 +173,25 @@ class Induceive_dataset(data.Dataset):
             question_edge_score_list.append(question_edge_score)
             user_edge_score_list.append(user_edge_score)
 
+
+        for i in user:
+            if len(i[i > self.user_len+self.content_count]) > 0:
+                print("[ERROR]user length problem {}".format(i[i > self.user_len + self.content_count]))
+                exit(-10)
+            if len(i[i < self.content_count]) > 0:
+                print("content count {}".format(self.content_count))
+                print("Less value is {}".format(i[i < self.content_count]))
+                print("[ERROR]user length less")
+                exit(-11)
         question = list(map(self.contentEmbed, question))
         question_edge = list(map(self.contentEmbed, question_edge))
-        answer = self.contentEmbed([answer])
+        answer = self.contentEmbed([answer]).reshape(-1,)
         user_edge = list(map(self.contentEmbed, user_edge))
         #only two layers
-        return question[0], answer, user[0], score, \
+        return question[0], answer, user[0] - self.content_count, score, \
                question[1], question_edge[0], question_edge_score_list[0], \
                question[2], question_edge[1], question_edge_score_list[1], \
-                user[1], user_edge[0], user_edge_score_list[0], \
-                user[2], user_edge[1], user_edge_score_list[1]
+               user[1] - self.content_count, user_edge[0], user_edge_score_list[0], \
+               user[2] - self.content_count, user_edge[1], user_edge_score_list[1]
 
 

@@ -79,19 +79,16 @@ def convert_instance_to_idx_seq(word_insts, word2idx):
     ''' Mapping words to idx sequence. '''
     return [[word2idx.get(w, Constants.UNK) for w in s] for s in word_insts]
 
-def GenerateGraph(question_answer_user_label, train_index, val_index):
+def GenerateGraph(question_answer_user_label, train_index, val_index, content_count):
     train_data = question_answer_user_label[train_index]
     val_data = question_answer_user_label[val_index]
     G = nx.Graph()
     user_list = []
-    question_list = []
     for line in train_data:
         question = line[0]
         answer = line[1]
-        user = line[2]
-
+        user = line[2] + content_count
         user_list.append(user)
-        question_list.append(question)
         label = line[3]
         G.add_node(question,type=0)
         G.add_node(user, type=1)
@@ -99,16 +96,15 @@ def GenerateGraph(question_answer_user_label, train_index, val_index):
     for line in val_data:
         question = line[0]
         answer = line[1]
-        user = line[2]
+        user = line[2] + content_count
         user_list.append(user)
-        question_list.append(question)
         label = line[3]
         G.add_node(question, type=0)
         G.add_node(user, type=1)
         G.add_edge(question, user, a_id=answer, score=label, train_removed=True)
-    user_id2idx = {id: index for index, id in enumerate(user_list)}
-    question_id2idx = {id:index for index, id in enumerate(question_list)}
-    return G, user_id2idx, question_list
+    print("[INFO] Graph contains {} edge, contentCount is {}".format(len(G.edges()), content_count))
+    # print("[INFO] There are {} users, bigggest id is {}".format(len(set(user_list)), max(user_list)))
+    return G, max(user_list) - content_count + 1
 
 def main():
     ''' Main function '''
@@ -125,15 +121,15 @@ def main():
     parser.add_argument('-share_vocab', action='store_true')
     parser.add_argument('-vocab', default=None)
     parser.add_argument('-train_size', default=0.6)
-    parser.add_argument('-val_size', default=0.3)
-    parser.add_argument('-test_size', default=0.1)
+    parser.add_argument('-val_size', default=0.4)
+    parser.add_argument('-test_size', default=0.0)
 
     opt = parser.parse_args()
     content, user_context, question_answer_user_label = xmlhandler.main(opt.raw_data)
 
     content_word_list = shrink_clean_text(content, opt.max_word_seq_len)
     question_answer_user_label = np.array(question_answer_user_label)
-
+    content_count = np.max(np.array(question_answer_user_label)[:,[0,1]]) + 1
 
 
     # Build vocabulary
@@ -152,15 +148,10 @@ def main():
     train_index = index[:train_end]
     val_index = index[train_end: val_end]
     test_index = index[val_end:]
-    G = GenerateGraph(question_answer_user_label,train_index,val_index)
 
-    #DEBUG
-    # user = [i_list[2] for i_list in question_answer_user_label]
-    # unique, counts = np.unique(np.array(user), return_counts=True)
-    #
-    # dic = dict(zip(unique, counts))
-    # sorted_dic = sorted(dic.items(), key=lambda x: -x[1])
-    #DEBUG END
+    G, user_count = GenerateGraph(question_answer_user_label, train_index, val_index, content_count)
+
+
 
     data = {
         'settings': opt,
@@ -170,7 +161,8 @@ def main():
         'question_answer_user_train': question_answer_user_label[train_index],
         'question_answer_user_val': question_answer_user_label[val_index],
         'question_answer_user_test': question_answer_user_label[test_index],
-        'G': G
+        'G': G,
+        'user_count': user_count
     }
 
     opt.save_data="data/store.torchpickle"
@@ -179,26 +171,7 @@ def main():
     print('[Info] Finish.')
 
 
-# import plotly.plotly as py
-# import plotly.tools as tls
-#
-#
-# import matplotlib.pyplot as plt
-# def plot(data):
-#
-#     marker = 'o'
-#     t = list(range(len(data[0])))
-#     for i in data:
-#         plt.plot(t, i)
-#     # plt.hist(data, bins=len(np.unique(data)), facecolor='green')
-#     plt.grid(True)
-#     plt.show()
 
-    # histogram = plt.figure()
-    # bins = np.linspace(0, 10000, 10000)
-    # plt.hist(data, bins, alpha=0.5)
-    # plotly_fig = tls.mpl_to_plotly(histogram)
-    # py.iplot(plotly_fig, filename='histogram-mpl-same')
 
 
 if __name__ == '__main__':

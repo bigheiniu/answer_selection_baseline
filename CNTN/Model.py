@@ -12,18 +12,18 @@ class CNTN(nn.Module):
         self.embedding = nn.Embedding.from_pretrained(pretrained_embed)
         self.cntn = nn.ModuleList([
             nn.Sequential(
-                nn.Conv2d(in_channels=self.args.in_channels[i],
-                          out_channels=self.args.out_channgels[i],
-                          kernel_size=self.args.cnn_kernel_size[i]),
-                nn.BatchNorm2d(self.args.out_channgels[i]),
+                nn.Conv2d(in_channels=self.args.in_channel,
+                          out_channels=self.args.out_channgel,
+                          kernel_size=self.args.cnn_kernel_size),
+                nn.BatchNorm2d(self.args.out_channgels),
                 nn.ReLU(),
-                nn.MaxPool2d(self.pool_kernel_size[i])
+                nn.MaxPool2d(self.pool_kernel_size)
             )
-            for i in range(self.args.layer)
+            for _ in range(self.args.layer)
         ])
-        self.bilinear_M = nn.Bilinear(self.args.in_features, self.args.int_features, self.out_features)
-        self.linear_V = nn.Linear(2 * self.int_features, self.out_features, bias=False)
-        self.linear_U = nn.Linear(self.out_features, 1, bias=False)
+        self.bilinear_M = nn.Bilinear(self.args.in_features, self.args.in_features, self.out_features)
+        self.linear_V = nn.Linear(2 * self.args.in_features, self.args.out_features, bias=False)
+        self.linear_U = nn.Linear(self.args.out_features, 1, bias=False)
 
         nn.init.xavier_normal_(self.bilinear_M.weight)
         nn.init.xavier_normal_(self.bilinear_M.bias)
