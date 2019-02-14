@@ -14,9 +14,6 @@ from attention.Utils import Accuracy
 #grid search for paramter
 from sklearn.model_selection import ParameterGrid
 
-
-
-def
 def prepare_dataloaders(data, opt):
     # ========= Preparing DataLoader =========#
 
