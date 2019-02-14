@@ -118,3 +118,17 @@ class LSTM(nn.Module):
         output = torch.mean(output, dim = -2)
         output = output.view(tuple(shape))
         return output
+
+
+class ContentEmbed:
+    def __init__(self, content):
+        self.content = content
+
+    def content_embed(self, batch_id):
+        shape = [*batch_id.shape]
+        shape.append(len(self.content[0]))
+        shape = tuple(shape)
+        batch_id = batch_id.view(-1, )
+        content = self.content[batch_id]
+        content = content.view(shape)
+        return content
