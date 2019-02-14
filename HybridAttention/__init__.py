@@ -1,11 +1,9 @@
-import attention.Layers
-import attention.Model
-import attention.Utils
-import attention.Constants
+import HybridAttention.Layers
+import HybridAttention.Model
+import Utils
 
 __all__ = [
-    attention.Layers,
-    attention.Model,
-    attention.Utils,
-    attention.Constants
+    Layers,
+    Model,
+    Utils
 ]

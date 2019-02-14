@@ -3,22 +3,17 @@ import math
 import time
 from tqdm import tqdm
 from tqdm import trange
-#pytorch import
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-from attention.Model import HybridAttentionModel
-import numpy as np
+from HybridAttention.Model import HybridAttentionModel
 from dataset import QuestionAnswerUser, paired_collate_fn
-from attention.Utils import Accuracy
+from Utils import Accuracy
 
 
-#grid search for paramter
-from sklearn.model_selection import ParameterGrid
 from sklearn.model_selection import ParameterGrid
 from visualization.logger import Logger
 from CNTN.Model import CNTN
-from attention.Utils import loadEmbed, Precesion_At_One, Mean_Average_Precesion
+from Utils import loadEmbed, Precesion_At_One, Mean_Average_Precesion
 
 info = {}
 logger = Logger('./logs')
