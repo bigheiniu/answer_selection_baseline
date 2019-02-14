@@ -34,6 +34,55 @@ def collate_fn(insts, label=False, not_user=True):
 
     return batch_seq
 
+class QuestionAnswer_CNTN(torch.utils.data.Dataset):
+    def __init__(self, question_answer_user, word2idx, word_inst):
+        idx2word = {idx: word for word, idx in word2idx.items()}
+        self._word2idx = word2idx
+        self._idx2word = idx2word
+        self._word_inst = word_inst
+        self.question_answer = self._item_pair(
+            self._sorted_question([item[0:2]+item[-1] for item in question_answer_user])
+        )
+
+
+    def _sorted_question(self, question_answer):
+        return sorted(question_answer, key=lambda x: x[0])[0]
+
+    def _item_pair(self, sorted_question_answer):
+        #question_id:[[answer_ids], [labels]]
+        index = []
+        dic = {}
+        for item in sorted_question_answer:
+            if item[0] not in dic and len(dic) != 0:
+                index.append(index)
+                dic = {}
+                dic[item[0]] = [[item[1]],[item[-1]]]
+            else:
+                dic[item[0]][0].append(item[1])
+                #add label
+                dic[item[0]][1].append(item[-1])
+        index.append(dic)
+        return index
+
+    def __len__(self):
+        return len(self.question_answer)
+
+    def __getitem__(self, idx):
+        question_answer_dic = self.question_answer[idx]
+        question = list(question_answer_dic.keys())[0]
+        answer_id = np.array(question_answer_dic[question][0])
+        labels = np.array(question_answer_dic[question_answer_dic][1])
+        good_answer_id_list = answer_id[labels == 1]
+        bad_answer_id_list = answer_id[labels == 0]
+
+        question_content = self._word_inst[question]
+        good_answer_content_list = self._word_inst[good_answer_id_list]
+        bad_answer_content_list = self._word_inst[bad_answer_id_list]
+        return question_content, good_answer_content_list, bad_answer_content_list, labels, [question]*len(answer_id)
+
+
+
+
 class QuestionAnswerUser(torch.utils.data.Dataset):
     def __init__(
         self, word2idx, word_insts,
@@ -47,6 +96,8 @@ class QuestionAnswerUser(torch.utils.data.Dataset):
         self._max_u_len = max_u_len
         self._question_answer_user = question_answer_user
         self._transformer = transformer
+        self.weights = self.weights_function()
+        self.data = self.balanced_data()
 
     @property
     def n_insts(self):
@@ -68,12 +119,34 @@ class QuestionAnswerUser(torch.utils.data.Dataset):
         ''' Property for index dictionary '''
         return self._idx2word
 
+    def _get_label(self, dataset, idx):
+        return dataset[idx][3]
+
+    def weights_function(self):
+        label_to_count = {}
+        for idx in list(range(self.n_insts)):
+            label = self._get_label(self._question_answer_user, idx)
+            if label in label_to_count:
+                label_to_count[label] += 1
+            else:
+                label_to_count[label] = 1
+        # weight for each sample
+        weights = [1.0 / label_to_count[self._get_label(self._question_answer_user, idx)]
+                   for idx in list(range(self.n_insts))]
+        weights = torch.DoubleTensor(weights)
+        return weights
+
+    def balanced_data(self):
+        return [self._question_answer_user[i] for i in torch.multinomial(
+                self.weights, self.n_insts, replacement=True)]
+
+
     def __len__(self):
         return self.n_insts
 
     def __getitem__(self, idx):
         # add a transformer => convert numpy into tensor
-        question_answer_user = self._question_answer_user[idx]
+        question_answer_user = self.data[idx]
         label = question_answer_user[3]
         user_id = question_answer_user[2]
         answer_id = question_answer_user[1]
@@ -89,4 +162,5 @@ class QuestionAnswerUser(torch.utils.data.Dataset):
             user_contex_list = self._transformer(user_contex_list)
             label = self._transformer(label)
 
-        return question_content, answer_content, user_contex_list, label
+
+        return question_content, answer_content, user_contex_list, label, question_id
