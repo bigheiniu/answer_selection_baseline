@@ -25,7 +25,7 @@ class config_model:
     #basic setting
     epoch = 60
     log = None
-    batch_size = 60
+    batch_size = 34
     model_name = ""
     cuda = False
     device = torch.device('cuda' if cuda else 'cpu' )
@@ -37,7 +37,7 @@ class config_model:
     #====================
 
     #max length of question
-    max_q_len = 60
+    max_q_len = 70
     #max length of answer
     max_a_len = 60
     #max length of user context
@@ -68,11 +68,19 @@ class config_model:
     #================
     #convolutional setting
     #================
-    cnn_layers = 3
-    cnn_kernel_size = [(5,5),(3,3),(4,4)]
-    in_channels = [3,4,5]
-    out_channels = [4,5,6]
 
+
+
+    # cntn cnn
+    cntn_cnn_layers = 3
+    cntn_kernel_size = [3,3,3]
+
+
+    #k max_pooling last layer
+    k_max_s = 50
+
+    cntn_last_max_pool_size = k_max_s
+    cntn_feature_r = 5
 
 
 
