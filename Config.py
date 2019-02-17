@@ -63,7 +63,8 @@ class config_model:
     lstm_hidden_size = 128
     lstm_num_layers = 1
     drop_out_lstm = 0.3
-    bidirectional = False
+    bidirectional = True
+    bidire_layer = 2 if bidirectional else 1
 
     #================
     #convolutional setting

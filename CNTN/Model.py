@@ -14,7 +14,7 @@ class CNTN(nn.Module):
         self.args = args
         self.word_embedding = nn.Embedding.from_pretrained(word2_vec)
         # input channels and output channels are the same
-        self.cnn_list = [nn.Conv2d(1,1, kernel_size) for kernel_size in self.args.cntn_kernel_size]
+        self.cnn_list = [nn.Conv2d(1, 1, kernel_size) for kernel_size in self.args.cntn_kernel_size]
         self.Content_emebd = Content_embed
 
         self.bilinear_M = nn.Bilinear(self.args.cntn_last_max_pool_size, self.args.cntn_last_max_pool_size, self.args.cntn_feature_r)
@@ -36,7 +36,7 @@ class CNTN(nn.Module):
 
         cnn_count = len(self.cnn_list)
         for depth, cnn in enumerate(self.cnn_list):
-            print("[INFO] CNTN we are at {}th layer".format(depth))
+            # Convolution
             question_cnn = cnn(question_embed)
             answer_cnn = cnn(answer_embed)
             depth = depth + 1
@@ -47,17 +47,20 @@ class CNTN(nn.Module):
             else:
                 k_question = self.args.k_max_s
                 k_answer = self.args.k_max_s
-
+            #Non-linear Feature Function
             question_embed = torch.tanh(kmax_pooling(question_cnn, -2, k_question))
             answer_embed = torch.tanh(kmax_pooling(answer_cnn, -2, k_answer))
 
 
 
         # transpose question/answer embedding
+        # Final Layer
         question_embed = matrix2vec_max_pooling(question_embed, dim=-1)
         answer_embed = matrix2vec_max_pooling(answer_embed, dim =-1)
+
         q_m_a = self.bilinear_M(question_embed, answer_embed)
         q_m_a = q_m_a + self.linear_V(torch.cat((question_embed, answer_embed), dim=-1))
+        q_m_a = torch.tanh(q_m_a)
         score = self.linear_U(q_m_a)
         score.squeeze_(-1)
         return score

@@ -24,7 +24,9 @@ class AMRNL(nn.Module):
         #already normalized
         self.user_adjance_embed = nn.Embedding.from_pretrained(user_adjance)
 
-        self.smantic_meache_bilinear = nn.Bilinear(args.lstm_hidden_size, args.lstm_hidden_size, args.lstm_hidden_size)
+        # f_M(q_i, u_j, a_k) = s_M(q_i, a_k)s(q_i, u_j)
+        # s_M(q_i, a_k) = q_i * M * a_k => batch_size * 1 => batch of question answer match score
+        self.smantic_meache_bilinear = nn.Bilinear(args.lstm_hidden_size, args.lstm_hidden_size, 1)
 
 
     def forward(self,
@@ -45,6 +47,7 @@ class AMRNL(nn.Module):
         answer_lstm = self.lstm(answer_embed_feature)
 
         match_score = self.smantic_meache_bilinear(question_lstm, answer_lstm)
+        #ATTENTION: In ARMNL they use (q_i).T * u_j as similarity between question and answer
         relevance_score = F.cosine_similarity(question_lstm, user_embed_feature, dim=-1)
         relevance_score.unsqueeze_(-1)
         result = match_score * relevance_score

@@ -1,18 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" autoUpload="On explicit save action" serverName="shool_weiying">
+  <component name="PublishConfigData" autoUpload="On explicit save action" serverName="school">
     <serverData>
-      <paths name="shool_weiying">
+      <paths name="school">
         <serverdata>
           <mappings>
-            <mapping deploy="/course/cqa" local="$PROJECT_DIR$" web="/" />
-          </mappings>
-        </serverdata>
-      </paths>
-      <paths name="weiying">
-        <serverdata>
-          <mappings>
-            <mapping deploy="/course/cqa" local="$PROJECT_DIR$" web="/" />
+            <mapping deploy="/course/cqa/" local="$PROJECT_DIR$" web="/" />
           </mappings>
         </serverdata>
       </paths>
