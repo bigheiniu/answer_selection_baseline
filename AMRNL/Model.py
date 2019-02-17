@@ -4,6 +4,9 @@ import torch.nn as nn
 from Utils import LSTM
 
 
+'''
+Community-Based Question Answering via Asymmetric Multi-Faceted Ranking Network Learning
+'''
 class AMRNL(nn.Module):
     def __init__(self, args,
                  user_count,
@@ -45,6 +48,7 @@ class AMRNL(nn.Module):
         relevance_score = F.cosine_similarity(question_lstm, user_embed_feature, dim=-1)
         relevance_score.unsqueeze_(-1)
         result = match_score * relevance_score
+
         #l2 norm
         regular = F.normalize(user_embed_feature - torch.matmul(user_neighbor, self.user_embed.weight), 2, dim=-1)
         return result, regular

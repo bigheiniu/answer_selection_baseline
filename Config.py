@@ -106,3 +106,10 @@ class config_model:
 
     #hinge loss margin
     margin = 0.1
+
+
+    #==============
+    #Multi Hop Attention Model
+    #==============
+
+    attention_layers = 3

@@ -4,7 +4,10 @@ import torch.nn.functional as F
 from Utils import loadEmbed
 from Layer import kmax_pooling, dynamic_k_cal, matrix2vec_max_pooling
 
+'''
+Convolutional Neural Tensor Network Architecture for Community-based Question Answering
 
+'''
 class CNTN(nn.Module):
     def __init__(self, args, word2_vec, Content_embed):
         super(CNTN, self).__init__()
