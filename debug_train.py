@@ -13,15 +13,13 @@ from dataset import QuestionAnswerUser, paired_collate_fn
 from attention.Utils import Accuracy
 
 
-#grid search for paramter
-from sklearn.model_selection import ParameterGrid
+
 from sklearn.model_selection import ParameterGrid
 from visualization.logger import Logger
-from CNTN.Model import CNTN
-from attention.Utils import loadEmbed, Precesion_At_One, Mean_Average_Precesion
+from attention.Utils import loadEmbed, Precesion_At_One, mAP
 
 info = {}
-logger = Logger('./logs')
+logger = Logger('./logs_map')
 i_flag = 0
 
 
@@ -106,14 +104,6 @@ def train_epoch_attention(model, data, optimizer, args, epoch):
         t = t + 1
         loss.backward()
         optimizer.step()
-
-    # for tag, value in model.named_parameters():
-    #     if value.grad is None:
-    #         continue
-    #     tag = tag.replace('.', '/')
-    #     logger.histo_summary(tag, value.cpu().detach().numpy(), epoch * l + i)
-    #     logger.histo_summary(tag + '/grad', value.grad.cpu().numpy(), epoch * l + i)
-
     i += 1
 
 
@@ -140,62 +130,61 @@ def eval_epoch_attention(model, data, args, epoch, model_name):
             true_label.append(gt_val)
             question_id_list.append(question_id)
             pred_score.append(result[:,1])
+            break
 
     pred_label = torch.cat(pred_label)
     true_label = torch.cat(true_label)
     pred_score = torch.cat(pred_score)
     accuracy, zero_count, one_count = Accuracy(pred_label, true_label)
-    mean_average_precesion = Mean_Average_Precesion(true_label, pred_score, question_id_list)
-    precesion_at_one = Precesion_At_One(true_label, pred_score, question_id_list)
+    mean_average_precesion = mAP(true_label, pred_score)
     info['eval_loss'] = loss.item()
     info['eval_accuracy'] = accuracy
     info['zero_count'] = zero_count
     info['one_count'] = one_count
-    info['P@1'] = precesion_at_one
     info['mAP'] = mean_average_precesion
     for tag, value in info.items():
         logger.scalar_summary(tag, value, epoch)
     print("[Info] Model: {} Accuacy: {}; {} samples, {} correct prediction".format(model_name, accuracy, len(pred_label), len(pred_label) * accuracy))
     return loss, accuracy
 
-def eval_epoch_cntn(model, data, args, epoch, model_name):
-    model.eval()
-    pred_all = []
-    label_all = []
-    loss_all = 0
-    question_id_list = []
-    with torch.no_grad():
-        for batch in tqdm(
-                data, mininterval=2, desc="  ----(validation)----  ", leave=True
-        ):
-            q_val, a_val, u_val, gt_val, question_id = map(lambda x: x.to(args.device), batch)
-            args.max_q_len = q_val.shape[1]
-            args.max_a_len = a_val.shape[1]
-            args.batch_size = gt_val.shape[0]
-            loss, predict = model(q_val, a_val, u_val)
-            loss_all += loss
-            pred_all.append(predict)
-            label_all.append(gt_val)
-            question_id_list.append(question_id)
-
-    pred_all = torch.cat(pred_all)
-    label_all = torch.cat(label_all)
-    question_id_list = torch.cat(question_id_list)
-    accuracy, zero_count, one_count = Accuracy(pred_all, label_all)
-    precesion_at_one = Precesion_At_One(label_all, pred_all, question_id_list)
-
-    mean_average_precesion = Mean_Average_Precesion(label_all, pred_all, question_id_list)
-    info['eval_loss'] = loss_all.item()
-    info['eval_accuracy'] = accuracy
-    info['zero_count'] = zero_count
-    info['one_count'] = one_count
-    info['P@1'] = precesion_at_one
-    info['mAP'] = mean_average_precesion
-    for tag, value in info.items():
-        logger.scalar_summary(tag, value, epoch)
-    print("[Info] Model:{} Accuacy: {}; {} samples, {} correct prediction".format(model_name,accuracy, len(pred_all),
-                                                                         len(pred_all) * accuracy))
-    return loss, accuracy
+# def eval_epoch_cntn(model, data, args, epoch, model_name):
+#     model.eval()
+#     pred_all = []
+#     label_all = []
+#     loss_all = 0
+#     question_id_list = []
+#     with torch.no_grad():
+#         for batch in tqdm(
+#                 data, mininterval=2, desc="  ----(validation)----  ", leave=True
+#         ):
+#             q_val, a_val, u_val, gt_val, question_id = map(lambda x: x.to(args.device), batch)
+#             args.max_q_len = q_val.shape[1]
+#             args.max_a_len = a_val.shape[1]
+#             args.batch_size = gt_val.shape[0]
+#             loss, predict = model(q_val, a_val, u_val)
+#             loss_all += loss
+#             pred_all.append(predict)
+#             label_all.append(gt_val)
+#             question_id_list.append(question_id)
+#
+#     pred_all = torch.cat(pred_all)
+#     label_all = torch.cat(label_all)
+#     question_id_list = torch.cat(question_id_list)
+#     accuracy, zero_count, one_count = Accuracy(pred_all, label_all)
+#     precesion_at_one = Precesion_At_One(label_all, pred_all, question_id_list)
+#
+#     mean_average_precesion = Mean_Average_Precesion(label_all, pred_all, question_id_list)
+#     info['eval_loss'] = loss_all.item()
+#     info['eval_accuracy'] = accuracy
+#     info['zero_count'] = zero_count
+#     info['one_count'] = one_count
+#     info['P@1'] = precesion_at_one
+#     info['mAP'] = mean_average_precesion
+#     for tag, value in info.items():
+#         logger.scalar_summary(tag, value, epoch)
+#     print("[Info] Model:{} Accuacy: {}; {} samples, {} correct prediction".format(model_name,accuracy, len(pred_all),
+#                                                                          len(pred_all) * accuracy))
+#     return loss, accuracy
 
 
 def grid_search(params_dic):
@@ -228,12 +217,12 @@ def train(args, train_data, val_data, word2idx,test_data, pre_trained_word2vec):
     #TODO: Early stopping
     for epoch_i in range(args.epoch):
         print("[ Epoch " , epoch_i ," {} ]".format(model_name))
-        if(args.model == 1):
-            train_epoch_attention(model, train_data, optimizer, args, epoch_i)
-            val_loss, accuracy_val = eval_epoch_attention(model, val_data, args, epoch_i)
-        elif(args.model == 2):
-            train_epoch_cntn(model, train_data, optimizer, args, epoch_i)
-            val_loss, accuracy_val = eval_epoch_cntn(model, val_data, args, epoch_i)
+        # if(args.model == 1):
+        # train_epoch_attention(model, train_data, optimizer, args, epoch_i)
+        val_loss, accuracy_val = eval_epoch_attention(model, val_data, args, epoch_i)
+        # elif(args.model == 2):
+        #     train_epoch_cntn(model, train_data, optimizer, args, epoch_i)
+        #     val_loss, accuracy_val = eval_epoch_cntn(model, val_data, args, epoch_i)
 
 
         print("[Info] Val Loss: {}, accuracy: {}".format(val_loss, accuracy_val))

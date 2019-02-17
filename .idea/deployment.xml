@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" autoUpload="On explicit save action" serverName="weiying">
+  <component name="PublishConfigData" autoUpload="Always" serverName="w_home">
     <serverData>
-      <paths name="Copy of project-level server 'weiying'">
+      <paths name="w_home">
         <serverdata>
           <mappings>
-            <mapping deploy="/home/yichuan/course/cqa" local="$PROJECT_DIR$" web="/" />
+            <mapping deploy="hybrid-github" local="$PROJECT_DIR$" web="/" />
           </mappings>
         </serverdata>
       </paths>
-      <paths name="weiying">
+      <paths name="weiying_home">
         <serverdata>
           <mappings>
             <mapping deploy="/home/yichuan/course/cqa" local="$PROJECT_DIR$" web="/" />
@@ -17,6 +17,6 @@
         </serverdata>
       </paths>
     </serverData>
-    <option name="myAutoUpload" value="ON_EXPLICIT_SAVE" />
+    <option name="myAutoUpload" value="ALWAYS" />
   </component>
 </project>

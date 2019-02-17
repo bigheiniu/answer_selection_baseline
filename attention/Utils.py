@@ -35,10 +35,16 @@ def loadEmbed(file, embed_size, vocab_size, word2idx=None, Debug=True):
 
         return weights
 
-# def mAP(pred, label):
-#     #label is binary
-#
-#     return average_precision_score(label, pred)
+def mAP(pred, label):
+    #label is binary
+    if isinstance(pred, torch.Tensor):
+        if (pred.is_cuda):
+            pred = pred.cpu().numpy()
+            label = label.cpu().numpy()
+        else:
+            pred = pred.numpy()
+            label = label.numpy()
+    return average_precision_score(label, pred)
 
 def Accuracy(pred, label):
     target = 0
