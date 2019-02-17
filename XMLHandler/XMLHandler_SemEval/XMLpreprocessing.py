@@ -3,22 +3,17 @@
 from lxml import etree
 import re
 
-def parse(xmlfile):
+def parse(xmlfile, content_id, user_dic, user_context):
     tree = etree.parse(xmlfile)
     good = 1
     bad = 0
-    content = {}
-    user = {}
+    content = []
     question_answer_user_label = []
-    # for orgquestion in tree.findall("Thread"):
-    #     if orgquestion.attrib["ORGQ_ID"] in seen_orgquestion_ids:
-    #         continue
-    #     seen_orgquestion_ids.update([orgquestion.attrib["ORGQ_ID"]])
-
     for thread in tree.findall("Thread"):
-        q_Id = thread.find("RelQuestion").attrib["RELQ_ID"]
-        q_user_Id = thread.find("RelQuestion").attrib["RELQ_USERID"]
+        q_Id_formal = thread.find("RelQuestion").attrib["RELQ_ID"]
+        q_Id = content_id
 
+        content_id += 1
         # Store question content
         # TODO: handle non text
         if thread.find("RelQuestion/RelQBody") is None:
@@ -26,28 +21,40 @@ def parse(xmlfile):
 
         if thread.find("RelQuestion/RelQClean") is not None:
             q_content = thread.find("RelQuestion/RelQClean").text
-        else:
+        elif thread.find("RealQuestion/RelQBody"):
             q_content = thread.find("RelQuestion/RelQBody").text
-        # question content is empty
-        if q_content is None or len(q_content) == 0:
-            continue
-
-        content[q_Id] = q_content
-        if q_user_Id in user:
-            user[q_user_Id].add(q_Id)
         else:
-            user[q_user_Id] = set([q_Id])
+            q_content = thread.find("RelQuestion/RelQSubject").text
+        # question content is empty
+        assert q_content is not None and len(q_content) > 0, "[ERROR] question content is emtpy"
+
+
+        content.append(q_content)
 
         for relcomment in (thread.findall("RelComment")):
 
-            a_Id = relcomment.attrib["RELC_ID"]
-            test_q_id = a_Id.split("_")
+            a_Id_formal = relcomment.attrib["RELC_ID"]
+            test_q_id = a_Id_formal.split("_")
+            a_Id = content_id
+            content_id += 1
+
             if len(test_q_id) == 2:
                 test_q_id = test_q_id[0]
             else:
                 test_q_id = test_q_id[0] + "_" + test_q_id[1]
-            assert q_Id == test_q_id, "[ERROR] question id {} conliction {} in {}".format(q_Id, test_q_id, xmlfile)
+            assert q_Id_formal == test_q_id, "[ERROR] question id {} conliction {} in {}".format(q_Id_formal, test_q_id, xmlfile)
             a_user_Id = relcomment.attrib["RELC_USERID"]
+
+            if a_user_Id not in user_dic:
+                user_dic[a_user_Id] = len(user_dic)
+            a_user_Id = user_dic[a_user_Id]
+
+            if a_user_Id not in user_context:
+                user_context[a_user_Id] = set([a_Id])
+            else:
+                user_context[a_user_Id].add(a_Id)
+
+
             label = good if relcomment.attrib["RELC_RELEVANCE2RELQ"] == 'Good' else bad
 
             if relcomment.find("RelCClean") is not None:
@@ -61,20 +68,16 @@ def parse(xmlfile):
                     print("{} {} {} {}".format(q_Id, a_Id, a_user_Id, xmlfile))
                     exit()
 
-            if answer_content is None or len(answer_content) == 0:
-                continue
-
+            assert answer_content is not None and len(answer_content) > 0, "[ERROR] Answer content is empty"
+            content.append(answer_content)
             # user here is answerer
             question_answer_user_label.append([q_Id, a_Id, a_user_Id, label])
-            content[a_Id] = answer_content
-            if a_user_Id in user:
-                user[a_user_Id].add(a_Id)
-            else:
-                user[a_user_Id] = set([a_Id])
+
+
 
 
     assert len(content) > 0, "[ERROR] content data in {} is empty".format(xmlfile)
-    return content, question_answer_user_label, user
+    return content, question_answer_user_label, user_dic, content_id, user_context
 
 
 

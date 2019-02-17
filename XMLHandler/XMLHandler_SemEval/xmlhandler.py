@@ -2,9 +2,11 @@
 
 
 
-from XMLHandler.XMLpreprocessing import parse
+from XMLHandler.XMLHandler_SemEval.XMLpreprocessing import parse
 import os
-
+import  numpy as np
+import collections
+import gc
 
 
 def convert_content_id(data):
@@ -78,6 +80,40 @@ def convert_question_answer_userId(data, user_id2idx, content_id2idx):
 
 
 
+def idReorder(question_answer_user_label, content, user_context):
+    user_context_reorder = {}
+    user= np.array([line[2] for line in question_answer_user_label])
+    user_id = np.unique(user)
+    user_count = len(user_id)
+    user_dic = {id:index for index, id in enumerate(user_id)}
+
+    question = [line[0] for line in question_answer_user_label]
+    answer = np.array([line[1] for line in question_answer_user_label])
+    question_id = np.unique(question)
+    question_dic = {id:index for index, id in enumerate(question_id)}
+    question_count = len(question_id)
+    answer_id = np.unique(answer)
+    answer_dic = {id:index + question_count for index, id in enumerate(answer_id)}
+
+    for line_index in range(len(question_answer_user_label)):
+        question_answer_user_label[line_index][0] = question_dic[question[line_index]] + user_count
+        question_answer_user_label[line_index][1] = answer_dic[answer[line_index]] + user_count
+        question_answer_user_label[line_index][2] = user_dic[user[line_index]]
+    for user_id, context in user_context.items():
+        user_context_reorder[user_dic[user_id]] = [answer_dic[i] for i in context]
+
+    content_dic =  {**question_dic, **answer_dic}
+    content_dic = collections.OrderedDict(sorted(content_dic.items(), key=lambda x: x[1]))
+    content_reorder = []
+
+    for flag, (id, index) in enumerate(content_dic.items()):
+        assert flag == index,"[ERROR]content reorder problem"
+        content_reorder.append(content[id])
+
+
+    return r, content_reorder, user_context_reorder,user_count, question_count
+
+
 
 
 
@@ -86,27 +122,24 @@ def read_xml_data(path):
     # for easy handle, we will read all the data and then random split data into "train, val, test"
     sub_dirs = os.listdir(path)
     sub_dirs = [os.path.join(path,dir) for dir in sub_dirs if os.path.isdir(os.path.join(path,dir))]
-    # sub_dirs = [os.path.join(path, dir) for dir in sub_dirs ]
     content = []
     question_answer_user_label = []
-    user_post = []
+    content_id = 0
+    user_dic = {}
+    user_context = {}
     for sub_dir in sub_dirs:
         print(sub_dir)
         for file in os.listdir(sub_dir):
             if "xml" not in file or "subtaskA" not in file:
                 continue
             file = os.path.join(sub_dir, file)
-            content_file, question_answer_user_label_file, user_post_file = parse(file)
-            content.append(content_file)
-            question_answer_user_label.append(question_answer_user_label_file)
-            user_post.append(user_post_file)
+            content_file, question_answer_user_label_file, user_dic, content_id, user_context = parse(file, user_dic=user_dic, content_id=content_id, user_context=user_context)
+            content += content_file
+            question_answer_user_label += question_answer_user_label_file
 
-    return content, question_answer_user_label, user_post
+    return content, question_answer_user_label, user_context
 
 def main(path):
-    content, question_answer_user_label, user_post = read_xml_data(path)
-    content_id2idx, content = convert_content_id(content)
-    user_id2idx, user_context = convert_user_id(user_post, content_id2idx)
-    question_answer_user_label = convert_question_answer_userId(question_answer_user_label, user_id2idx, content_id2idx)
-
-    return content, user_context, question_answer_user_label
+    content, question_answer_user_label, user_context = read_xml_data(path)
+    question_answer_user_label, content, user_context, user_count, question_count= idReorder(question_answer_user_label, content, user_context)
+    return content,  question_answer_user_label, user_context, user_count, question_count
