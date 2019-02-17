@@ -1,55 +1,64 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from attention.Utils import loadEmbed
+from Utils import loadEmbed
+from Layer import kmax_pooling, dynamic_k_cal, matrix2vec_max_pooling
 
 
 class CNTN(nn.Module):
-    def __init__(self, args, word2idx, pretrained_embed):
+    def __init__(self, args, word2_vec, Content_embed):
         super(CNTN, self).__init__()
-        self.word2idx = word2idx
         self.args = args
-        self.embedding = nn.Embedding.from_pretrained(pretrained_embed)
-        self.cntn = nn.ModuleList([
-            nn.Sequential(
-                nn.Conv2d(in_channels=self.args.in_channel,
-                          out_channels=self.args.out_channgel,
-                          kernel_size=self.args.cnn_kernel_size),
-                nn.BatchNorm2d(self.args.out_channgels),
-                nn.ReLU(),
-                nn.MaxPool2d(self.pool_kernel_size)
-            )
-            for _ in range(self.args.layer)
-        ])
-        self.bilinear_M = nn.Bilinear(self.args.in_features, self.args.in_features, self.out_features)
-        self.linear_V = nn.Linear(2 * self.args.in_features, self.args.out_features, bias=False)
-        self.linear_U = nn.Linear(self.args.out_features, 1, bias=False)
+        self.word_embedding = nn.Embedding.from_pretrained(word2_vec)
+        # input channels and output channels are the same
+        self.cnn_list = [nn.Conv2d(1,1, kernel_size) for kernel_size in self.args.cntn_kernel_size]
+        self.Content_emebd = Content_embed
+
+        self.bilinear_M = nn.Bilinear(self.args.cntn_last_max_pool_size, self.args.cntn_last_max_pool_size, self.args.cntn_feature_r)
+        self.linear_V = nn.Linear(2 * self.args.cntn_last_max_pool_size, self.args.cntn_feature_r, bias=False)
+        self.linear_U = nn.Linear(self.args.cntn_feature_r, 1, bias=False)
 
         nn.init.xavier_normal_(self.bilinear_M.weight)
-        nn.init.xavier_normal_(self.bilinear_M.bias)
         nn.init.xavier_normal_(self.linear_V.weight)
         nn.init.xavier_normal_(self.linear_U.weight)
 
-    def forward(self, question, good_answer_list, bad_answer_list, label):
-        question_embed = self.embedding(question)
-        question_cntn = self.cntn(question_embed)
-        good_answer_embed = self.embedding(good_answer_list)
-        good_answer_cntn = self.cntn(good_answer_embed)
-        good_q_m_a = self.bilinear_M(question_cntn, good_answer_cntn)
-        good_q_m_a = good_q_m_a + self.linear_V(nn.cat((question_cntn, good_answer_cntn)))
-        good_score = self.linear_U(good_q_m_a)
+    def forward(self, question, answer_list):
 
-        bad_answer_embed = self.embedding(bad_answer_list)
-        bad_answer_cntn = self.cntn(bad_answer_embed)
-        bad_q_m_a = self.bilinear_M(question_cntn, bad_answer_cntn)
-        bad_score = self.linear_U(bad_q_m_a)
+        question_embed = self.word_embedding(self.Content_emebd.content_embed(question))
+        question_embed.unsqueeze_(1)
+        answer_embed = self.word_embedding(self.Content_emebd.content_embed(answer_list))
+        answer_embed.unsqueeze_(1)
+        question_length = question_embed.shape[-2]
+        answer_length = answer_embed.shape[-2]
 
-        good_score = good_score.unsqueeze(-2).expand(-1, bad_score.shape[-2], -1)
-        score = bad_score - good_score
-        score = score + self.args.gamma
-        loss = torch.where(score > 0, score, 0).sum()
-        result = torch.cat((good_score, bad_score))
-        return loss, result
+        cnn_count = len(self.cnn_list)
+        for depth, cnn in enumerate(self.cnn_list):
+            print("[INFO] CNTN we are at {}th layer".format(depth))
+            question_cnn = cnn(question_embed)
+            answer_cnn = cnn(answer_embed)
+            depth = depth + 1
+            #k-max-pooling
+            if depth < cnn_count:
+                k_question = dynamic_k_cal(current_layer_depth=depth, cnn_layer_count=cnn_count, sentence_length=question_length,k_top=self.args.k_max_s)
+                k_answer = dynamic_k_cal(current_layer_depth=depth, cnn_layer_count=cnn_count, sentence_length=answer_length,k_top=self.args.k_max_s)
+            else:
+                k_question = self.args.k_max_s
+                k_answer = self.args.k_max_s
+
+            question_embed = torch.tanh(kmax_pooling(question_cnn, -2, k_question))
+            answer_embed = torch.tanh(kmax_pooling(answer_cnn, -2, k_answer))
+
+
+
+        # transpose question/answer embedding
+        question_embed = matrix2vec_max_pooling(question_embed, dim=-1)
+        answer_embed = matrix2vec_max_pooling(answer_embed, dim =-1)
+        q_m_a = self.bilinear_M(question_embed, answer_embed)
+        q_m_a = q_m_a + self.linear_V(torch.cat((question_embed, answer_embed), dim=-1))
+        score = self.linear_U(q_m_a)
+        score.squeeze_(-1)
+        return score
+
 
 
 
